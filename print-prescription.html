@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prescription Print Sheet</title>
+  <meta name="color-scheme" content="light dark" />
+  <style>
+    :root { --page-w: 820px; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Inter, Roboto, Arial, sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      background:#f3f4f6;
+    }
+    .controls { text-align: center; padding: 12px; }
+    .btn {
+      padding: 6px 14px;
+      margin: 0 6px;
+      background: #3b82f6;
+      border: none;
+      color: white;
+      font-weight: 600;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn:hover { background: #2563eb; }
+    .page {
+      position: relative;
+      width: min(var(--page-w), 98vw);
+      margin: 10px auto 24px;
+      background: #fff;
+      box-shadow: 0 10px 40px rgba(0,0,0,.15);
+      border: 1px solid #e5e7eb;
+      aspect-ratio: 3/4;
+      overflow: hidden;
+    }
+    .bg {
+      position:absolute; inset:0;
+      background-image: url(prescription-template.jpg); /* optional background */
+      background-size: cover;
+      background-position: center top;
+      background-repeat: no-repeat;
+    }
+    .overlay { position:absolute; inset:0; padding: 0; }
+    .field {
+      position:absolute;
+      font-size: clamp(12px, 2.1vw, 16px);
+      color:#111;
+      white-space: pre-wrap;
+    }
+    .f-name { left: 15%; top: 16%; width: 50%; }
+    .f-age  { left: 62%; top: 16%; width: 8%; text-align:left; }
+    .f-sex  { left: 72.5555%; top:16%; width: 10%; text-align:left; }
+    .f-date { left: 88%; top: 16%; width: 10%; text-align:center; }
+    .f-body { left: 8%; top: 25%; width: 84%; line-height: 1.5; }
+    .line { display: block; margin: 6px 0; }
+    .section-head {
+      display: block; margin: 16px 0 8px;
+      font-weight: 700; font-size: 1rem; color: #000;
+      border-bottom: 1px solid #ddd; padding-bottom: 2px;
+    }
+    .sub-line { display: block; margin: 4px 0 4px 24px; line-height: 2.0; }
+    .disease-entry { display: block; margin: 4px 0 4px 24px; line-height: 1.8; }
+    @media print {
+      @page { size: A4 portrait; margin: 0mm; }
+      body { background: white; margin: 0; padding: 0; }
+      .controls { display: none !important; }
+      .page {
+        box-shadow: none; border: none;
+        width: 210mm;
+        height: 292mm;
+        margin: 0 auto;
+        aspect-ratio: auto;
+        overflow: hidden;
+      }
+      .bg {
+        background-size: contain !important;
+        background-position: center top;
+      }
+      .field { font-size: 12pt; }
+    }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <button class="btn" onclick="history.back()">Back</button>
+    <button class="btn" onclick="window.print()">Print</button>
+  </div>
+
+  <div class="page" id="page">
+    <div class="bg" aria-hidden="true"></div>
+    <div class="overlay" id="overlay">
+      <div class="field f-name" id="out-name"></div>
+      <div class="field f-age"  id="out-age"></div>
+      <div class="field f-sex"  id="out-sex"></div>
+      <div class="field f-date" id="out-date"></div>
+      <div class="field f-body" id="out-body"></div>
+    </div>
+  </div>
+
+<script>
+  const STORAGE_KEY = 'prescriptions';
+
+  function loadAll(){
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+    catch { return []; }
+  }
+  function pickRecord(){
+    const params = new URLSearchParams(location.search);
+    const id = params.get('id');
+    try {
+      const stored = localStorage.getItem('printPrescription');
+      if (stored) {
+        const p = JSON.parse(stored);
+        localStorage.removeItem('printPrescription');
+        return p;
+      }
+    } catch {}
+    const all = loadAll();
+    if (!all.length) return null;
+    if (id) {
+      const numId = Number(id);
+      return all.find(p => String(p.id) === id || p.id === numId) || all[0];
+    }
+    return all[0];
+  }
+
+  function escapeHtml(s){
+    return String(s||'').replace(/[&<>"']/g, m=>({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[m]));
+  }
+  // Pretty units
+  function formatBP(bp){
+    const s = String(bp || '').trim();
+    if (!s) return '';
+    return /\bmmhg\b/i.test(s) ? s : `${s} mmHg`;
+  }
+  function formatWeight(w){
+    const s = String(w || '').trim();
+    if (!s) return '';
+    return /\bkg\b/i.test(s) ? s : `${s} kg`;
+  }
+  function splitList(str){
+    return String(str || '')
+      .split(';')
+      .map(s => s.trim())
+      .filter(Boolean);
+  }
+
+  function render(p){
+    const outName = document.getElementById('out-name');
+    const outAge  = document.getElementById('out-age');
+    const outSex  = document.getElementById('out-sex');
+    const outDate = document.getElementById('out-date');
+    const outBody = document.getElementById('out-body');
+
+    if (!p){
+      outBody.innerHTML = '<span class="muted">No prescriptions found in this browser. Save one first.</span>';
+      return;
+    }
+
+    // Header
+    outName.textContent = (p.patientName ?? '').toString();
+    outAge.textContent  = (p.age ?? '').toString();
+    outSex.textContent  = (p.sex ?? '').toString();
+    const dt = p.date ? new Date(p.date) : (p.createdAt ? new Date(p.createdAt) : new Date());
+    outDate.textContent = isNaN(dt.getTime()) ? (p.date ?? '').toString() : dt.toLocaleDateString();
+
+    // Columns
+    const leftCol = [];
+    const rightCol = [];
+
+    // ========= LEFT COLUMN =========
+    // 1) C/C (Chief Complaints)
+    const diseases = Array.isArray(p.diseases) ? p.diseases
+                    : (p.disease ? [{ name: p.disease, days: 0 }] : []);
+    if (diseases.length) {
+      leftCol.push('<span class="section-head">&bull; C/C (Chief Complaints):</span>');
+      diseases.forEach((d, i) => {
+        const name = d.name || '';
+        const days = d.days || 0;
+        const duration = days > 0 ? ` (${days} days suffering)` : '';
+        leftCol.push('<span class="disease-entry">' + (i+1) + ') ' + escapeHtml(name) + duration + '</span>');
+      });
+    }
+
+    // 1.5) Selected Histories (under C/C)
+    const histories = p.histories || {};
+    const flags = p.printOptions || {};
+    const sectionLabels = {
+      pastIllness: 'Past Illness',
+      birthHistory: 'Birth History',
+      feedingHistory: 'Feeding History',
+      developmentHistory: 'Development History',
+      treatmentHistory: 'Treatment History',
+      familyHistory: 'Family History'
+    };
+    const selectedHistoryLines = [];
+    Object.entries(sectionLabels).forEach(([key, label]) => {
+      if (flags[key]) {
+        const val = (histories[key] || '').trim();
+        if (val) {
+          selectedHistoryLines.push(`<span class="sub-line"><strong>${escapeHtml(label)}:</strong> ${escapeHtml(val)}</span>`);
+        }
+      }
+    });
+    if (selectedHistoryLines.length) {
+      leftCol.push('<span class="section-head">&bull; History:</span>');
+      leftCol.push(selectedHistoryLines.join(''));
+    }
+
+    // 2) On Examination (Findings + vitals)
+    const findings = splitList(p.provisionalDiagnosis);
+    const bp = String(p.bp || '').trim();
+    const weight = String(p.weight || '').trim();
+
+    if (findings.length || bp || weight) {
+      leftCol.push('<span class="section-head">&bull; On Examination:</span>');
+      // Findings first
+      findings.forEach((f, i) => {
+        leftCol.push('<span class="sub-line">' + (i+1) + ') ' + escapeHtml(f) + '</span>');
+      });
+      // Vitals continue numbering
+      let n = findings.length;
+      if (bp) {
+        n += 1;
+        leftCol.push('<span class="sub-line">' + n + ') BP: ' + escapeHtml(formatBP(bp)) + '</span>');
+      }
+      if (weight) {
+        n += 1;
+        leftCol.push('<span class="sub-line">' + n + ') Weight: ' + escapeHtml(formatWeight(weight)) + '</span>');
+      }
+    }
+
+    // 3) Investigation (Test)
+    const tests = Array.isArray(p.tests) ? p.tests : [];
+    if (tests.length) {
+      leftCol.push('<span class="section-head">&bull; Investigation (Test):</span>');
+      tests.forEach((t, i) => {
+        const bits = [t.name, t.notes].filter(Boolean).map(escapeHtml);
+        leftCol.push('<span class="sub-line">' + (i+1) + ') ' + bits.join(' · ') + '</span>');
+      });
+    }
+
+    // 4) Provisional Diagnosis (free-text notes)
+    if ((p.notes || '').trim()) {
+      leftCol.push('<span class="section-head">&bull; Provisional Diagnosis:</span>');
+      leftCol.push('<span class="sub-line">' + escapeHtml(p.notes) + '</span>');
+    }
+
+    // ========= RIGHT COLUMN =========
+    // 1) Treatment (meds)
+    const meds = Array.isArray(p.meds) ? p.meds : [];
+    if (meds.length) {
+      rightCol.push('<span class="section-head">&bull; Treatment:</span>');
+      meds.forEach((m, i) => {
+        const bits = [m.name, m.dosage, m.freq, m.duration].filter(Boolean).map(escapeHtml);
+        rightCol.push('<span class="sub-line">' + (i+1) + ') ' + bits.join(' · ') + '</span>');
+      });
+    }
+
+    // 2) উপদেশ (from multi-box; saved in p.diagnosis)
+    const adviceItems = splitList(p.diagnosis);
+    if (adviceItems.length) {
+      rightCol.push('<span class="section-head">&bull; উপদেশ:</span>');
+      adviceItems.forEach((text, i) => {
+        rightCol.push('<span class="sub-line">' + (i+1) + ') ' + escapeHtml(text) + '</span>');
+      });
+    }
+
+    // 3) Follow-Up
+    if (p.followUpDays) {
+      rightCol.push('<span class="section-head">&bull; Follow-Up:</span>');
+      rightCol.push('<span class="sub-line">' + escapeHtml(p.followUpDays) + ' days</span>');
+    }
+
+    // Render columns
+    outBody.innerHTML = `
+      <div style="display: flex; gap: 24px; align-items: flex-start;">
+        <div style="flex:1; min-width: 45%;">${leftCol.join('')}</div>
+        <div style="flex:1; min-width: 45%;">${rightCol.join('')}</div>
+      </div>
+    `;
+  }
+
+  render(pickRecord());
+</script>
+
+</body>
+</html>

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Patient Prescription</title>
+  <meta name="color-scheme" content="light dark" />
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="shell">
+    <!-- Header Bar -->
+    <div class="bar">
+      <!-- Title and Icon -->
+      <div class="title">
+        <div class="mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#3ba6ff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" width="22" height="22" aria-hidden="true">
+            <path d="M12 2l2.5 5 5 .7-3.7 3.6.9 5-4.7-2.5L7.3 16l.9-5L4.5 7.7 9.5 7z"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Patient Prescription</h1>
+          <div class="subtle">Mission: precision care</div>
+        </div>
+      </div>
+      <!-- Toolbar Buttons -->
+      <div class="toolbar">
+        <div class="dropdown">
+          <button type="button" class="btn btn--ghost" id="btn-sections">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M4 8h16M4 12h16M4 16h16"/>
+            </svg>
+            Sections ▾
+          </button>
+          <div class="menu" id="menu-sections" role="menu" aria-label="Select sections to include"></div>
+        </div>
+        <button class="btn btn--ghost" id="btn-portal">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M15 18l-6-6 6-6"/>
+          </svg>
+          Portal
+        </button>
+      </div>
+      <div class="toolbar">
+        <button type="button" class="btn" id="btn-save">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M19 21H5a2 2 0 0 1-2-2V7l4-4h11l3 3v13a2 2 0 0 1-2 2Z"/>
+            <path d="M7 21v-8h10v8"/>
+            <path d="M7 3v5h8"/>
+          </svg>
+          Save
+        </button>
+        <button type="button" class="btn btn--primary" id="btn-save-print">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M6 9V3h12v6"/>
+            <rect x="6" y="13" width="12" height="8" rx="2"/>
+            <path d="M6 17h12"/>
+          </svg>
+          Save &amp; Print
+        </button>
+        <button type="button" class="btn btn--ghost" id="btn-clear">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M3 6h18M8 6v12M16 6v12"/>
+          </svg>
+          Clear
+        </button>
+      </div>
+    </div>
+
+    <div class="card-body">
+      <form id="prescriptionForm" onsubmit="return false;">
+        <!-- Patient Information Section -->
+        <div class="section-title">Patient Information</div>
+        <div class="grid">
+          <div class="col-6">
+            <label for="patientName" style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <span>Patient Name</span>
+              <button type="button" class="btn mini" id="btn-peek" title="Peek past prescriptions (hover/hold)">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+                Peek
+              </button>
+            </label>
+            <input type="text" id="patientName" placeholder="e.g., Jane Doe" autocomplete="name" required>
+          </div>
+          <div class="col-3">
+            <label for="age">Age</label>
+            <input type="number" id="age" inputmode="numeric" min="0" max="150" placeholder="65">
+          </div>
+          <div class="col-3">
+            <label for="sex">Sex</label>
+            <select id="sex" required>
+              <option value="">Select</option>
+              <option value="Female">Female</option>
+              <option value="Male">Male</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="col-3">
+            <label for="date">Date</label>
+            <input type="date" id="date">
+          </div>
+          <div class="col-3">
+            <label for="followUp">Follow-Up Days</label>
+            <select id="followUp" onchange="customFollowUp.value = ''">
+              <option value="">Select</option>
+              <option value="3">৫ দিন পরে আসবেন </option>
+              <option value="5">৭ দিন পরে আসবেন  </option>  
+              <option value="7">২ সপ্তাহ পরে আসবেন </option>
+              <option value="10">৪ সপ্তাহ পরে আসবেন </option>
+              <option value="14">৩ মাস পরে আসবেন </option>
+              <option value="14">১ বছর পরে আসবেন</option>
+            </select>
+          </div>
+          <div class="col-3">
+            <label for="customFollowUp">Or enter custom</label>
+            <input type="number" id="customFollowUp" placeholder="e.g., 6"
+                   oninput="followUp.value = ''" min="1" max="60">
+          </div>
+          <div class="col-12">
+            <label style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <span>Diseases &amp; Duration</span>
+              <button type="button" class="btn mini" id="btn-add-disease">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M12 5v14M5 12h14"/>
+                </svg>
+                Add Disease
+              </button>
+            </label>
+            <div id="diseases-container"></div>
+            <div id="suggest" class="suggest" aria-live="polite">
+              <div class="head">
+                <span>Suggestions from your records</span>
+                <button type="button" class="btn mini" onclick="hideSuggestions()">Hide</button>
+              </div>
+              <div class="chips" id="suggest-chips"></div>
+            </div>
+          </div>
+
+          <!-- উপদেশ multi-box section -->
+          <div class="col-12">
+            <label style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <span>উপদেশ</span>
+              <button type="button" class="btn mini" id="btn-add-advice">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                  <path d="M12 5v14M5 12h14"/>
+                </svg>
+                Add Box
+              </button>
+            </label>
+            <div id="advice-container"></div>
+          </div>
+        </div>
+
+        <!-- Provisional Diagnosis Section -->
+        <div class="section-title">Provisional Diagnosis</div>
+        <label for="examinationSelect">Add Examination Findings</label>
+        <select id="examinationSelect" class="input">
+          <option value="">Select...</option>
+          <option value="Anemia">Anemia</option>
+          <option value="Jaundice">Jaundice</option>
+          <option value="Lymph Node">Lymph Node</option>
+          <option value="Heart">Heart</option>
+          <option value="Lungs">Lungs</option>
+          <option value="Liver">Liver</option>
+          <option value="Spleen">Spleen</option>
+          <option value="Abdomen">Abdomen</option>
+          <option value="Skin">Skin</option>
+          <option value="Eyes">Eyes</option>
+          <option value="Hydration">Hydration</option>
+          <option value="Oedema">Oedema</option>
+          <option value="Temperature">Temperature</option>
+          <option value="Respiratory Rate">Respiratory Rate</option>
+          <option value="Pallor">Pallor</option>
+          <option value="Cyanosis">Cyanosis</option>
+          <option value="Clubbing">Clubbing</option>
+          <option value="BP">Blood Pressure (BP)</option>
+          <option value="Weight">Weight</option>
+        </select>
+        <div id="provisionalDiagnosisContainer"></div>
+
+        <!-- Medications Section -->
+        <div class="section-title">Treatment</div>
+        <div class="toolbar">
+          <div class="spacer"></div>
+          <button type="button" class="btn" id="btn-add-med">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Add Medicine
+          </button>
+        </div>
+        <table id="meds-table">
+          <thead>
+            <tr>
+              <th>Medicine</th>
+              <th>Dosage</th>
+              <th>Frequency</th>
+              <th>Duration</th>
+              <th width="40"></th>
+            </tr>
+          </thead>
+          <tbody id="meds-tbody"></tbody>
+        </table>
+
+        <!-- Tests Section -->
+        <div class="section-title">Investigations</div>
+        <div class="toolbar">
+          <div class="spacer"></div>
+          <button type="button" class="btn" id="btn-add-test">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Add Test
+          </button>
+        </div>
+        <table id="tests-table">
+          <thead>
+            <tr>
+              <th>Test Name</th>
+              <th>Notes</th>
+              <th width="40"></th>
+            </tr>
+          </thead>
+          <tbody id="tests-tbody"></tbody>
+        </table>
+
+        <!-- Notes Section -->
+        <div class="section-title">Notes</div>
+        <div class="grid">
+          <div class="col-12">
+            <label for="notes">Provisional Diagnosis</label>
+            <textarea id="notes" placeholder=""></textarea>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Optional Histories Section -->
+    <div class="section-title">Histories (Optional)</div>
+    <div class="opt-grid">
+      <div class="opt-col-6">
+        <div class="opt-card" id="opt-pastIllness">
+          <div class="opt-head"><span class="opt-title">Past Illness</span></div>
+          <textarea id="pastIllness" placeholder="Free text…"></textarea>
+        </div>
+      </div>
+      <div class="opt-col-6">
+        <div class="opt-card" id="opt-birthHistory">
+          <div class="opt-head"><span class="opt-title">Birth History</span></div>
+          <textarea id="birthHistory" placeholder="Free text…"></textarea>
+        </div>
+      </div>
+      <div class="opt-col-6">
+        <div class="opt-card" id="opt-feedingHistory">
+          <div class="opt-head"><span class="opt-title">Feeding History</span></div>
+          <textarea id="feedingHistory" placeholder="Free text…"></textarea>
+        </div>
+      </div>
+      <div class="opt-col-6">
+        <div class="opt-card" id="opt-developmentHistory">
+          <div class="opt-head"><span class="opt-title">Development History</span></div>
+          <textarea id="developmentHistory" placeholder="Free text…"></textarea>
+        </div>
+      </div>
+      <div class="opt-col-6">
+        <div class="opt-card" id="opt-treatmentHistory">
+          <div class="opt-head"><span class="opt-title">Treatment History</span></div>
+          <textarea id="treatmentHistory" placeholder="Free text…"></textarea>
+        </div>
+      </div>
+      <div class="opt-col-6">
+        <div class="opt-card" id="opt-familyHistory">
+          <div class="opt-head"><span class="opt-title">Family History</span></div>
+          <textarea id="familyHistory" placeholder="Free text…"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Peek Popover -->
+  <div class="peek-pop" id="peek-pop">
+    <div class="peek-head">
+      <span>Past Prescriptions</span>
+      <button type="button" class="btn mini" onclick="hidePeek()">×</button>
+    </div>
+    <div class="peek-list" id="peek-list"></div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast">
+    <div class="bubble" id="toast-text">Saved!</div>
+  </div>
+
+  <!-- JavaScript -->
+  <script src="script.js"></script>
+</body>
+</html>

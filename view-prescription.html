@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>View Prescriptions</title>
+<meta name="color-scheme" content="light dark" />
+<style>
+  :root{
+    --space-900:#0b1020;--space-800:#111735;--space-700:#1a2448;
+    --ink:#e6eaf2;--muted:#93a0ba;--grid:#2c375f;
+    --accent:#3ba6ff;--accent-600:#2a8fe0;--ok:#19c37d;--danger:#ff5d5d;
+    --shadow:0 18px 60px rgba(0,0,0,.35);--radius:14px;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --space-900:#eef2f7;--space-800:#f7f8fb;--space-700:#ffffff;
+      --ink:#0f172a;--muted:#5c6b86;--grid:#e6e8ef;
+      --accent:#1e40af;--accent-600:#1c3a9b;
+      --shadow:0 16px 46px rgba(15,23,42,.10);
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Inter,Roboto,Arial,sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(1200px 800px at 15% 10%, #22306460 0%, #0000 55%),
+      radial-gradient(900px 900px at 85% 80%, #134e6a40 0%, #0000 50%),
+      var(--space-800);
+    padding:24px;
+  }
+  .shell{max-width:1100px;margin:0 auto}
+  .bar{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;gap:12px;flex-wrap:wrap}
+  .title{display:flex;align-items:center;gap:12px}
+  .mark{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;background:linear-gradient(135deg,#1a2448,#0b1020);border:1px solid #243160;box-shadow:inset 0 0 0 1px #36457a}
+  h1{margin:0;font-size:clamp(20px,3vw,24px)}
+  .btn{
+    appearance:none;border-radius:999px;border:1px solid var(--grid);
+    background:color-mix(in oklab,var(--space-700) 82%,#000 18%);
+    color:var(--ink);font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+    font-size:12.5px;padding:12px 16px;display:inline-flex;align-items:center;gap:10px;
+    cursor:pointer;transition:transform .1s,background .2s,border-color .2s,box-shadow .2s
+  }
+  .btn:hover{transform:translateY(-1px)}
+  .btn:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in oklab,var(--accent) 35%,transparent)}
+  .btn svg{width:16px;height:16px}
+  .btn--primary{
+    background:linear-gradient(180deg,color-mix(in oklab,var(--accent) 14%,transparent),#0000),
+               color-mix(in oklab,var(--accent) 16%,#0e1b33);
+    border-color:color-mix(in oklab,var(--accent) 60%,#142043);color:#f4f8ff
+  }
+  .btn--danger{border-color:color-mix(in oklab,var(--danger) 60%,#3d1a1a);color:#ff9b9b}
+  .card{
+    background:linear-gradient(180deg,color-mix(in oklab,var(--space-700) 92%,#fff 8%),var(--space-700));
+    border:1px solid var(--grid);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 16px
+  }
+
+  .filters{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;margin-bottom:14px}
+  @media (max-width:800px){.filters{grid-template-columns:1fr 1fr}}
+  input,select{
+    width:100%;background:color-mix(in oklab,var(--space-700) 88%,#000 12%);
+    color:var(--ink);border:1px solid var(--grid);border-radius:10px;padding:10px 12px;font-size:15px
+  }
+  .list{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+  .item{
+    background:color-mix(in oklab,var(--space-700) 92%,#000 8%);
+    border:1px solid var(--grid);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:8px;
+    transition:transform .15s ease, box-shadow .15s ease, border-color .2s ease;
+    cursor:pointer;
+  }
+  .item:hover{transform:translateY(-2px)}
+  .item .row{display:flex;gap:8px;flex-wrap:wrap}
+  .badge{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--grid);border-radius:999px;padding:6px 10px;font-size:12px;color:var(--muted)}
+  .badge--follow{
+    background: color-mix(in oklab, var(--accent) 14%, transparent);
+    border-color: color-mix(in oklab, var(--accent) 45%, var(--grid));
+    color: var(--accent);
+  }
+  .pill{border:1px dashed var(--grid);border-radius:999px;padding:4px 8px;font-size:12px;color:var(--muted)}
+  .disease-pill{background:color-mix(in oklab,var(--accent) 15%,transparent);border-color:color-mix(in oklab,var(--accent) 40%,var(--grid));color:var(--accent)}
+  .muted{color:var(--muted);font-size:13px}
+  .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+  .empty{text-align:center;color:var(--muted);padding:28px}
+
+  /* Collapsible details */
+  .header-line{display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .chev{margin-left:auto;font-size:11px;opacity:.8}
+  .preview{line-height:1.45}
+  .details{
+    overflow:hidden;
+    max-height:0;
+    opacity:.0;
+    transition:max-height .28s ease, opacity .28s ease;
+  }
+  .item.open .details{
+    max-height:800px; /* comfortably large */
+    opacity:1;
+  }
+
+  @media print{.bar,.filters,.actions,.btn{display:none !important}.card{box-shadow:none;border:0}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="bar">
+    <div class="title">
+      <div class="mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#3ba6ff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" width="22" height="22"><path d="M12 2l2.5 5 5 .7-3.7 3.6.9 5-4.7-2.5L7.3 16l.9-5L4.5 7.7 9.5 7z"/></svg>
+      </div>
+      <div>
+        <h1>View Prescriptions</h1>
+        <div class="muted">Browse, filter, reuse.</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn" onclick="goBack()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 18l-6-6 6-6"/></svg>
+        Back
+      </button>
+      <button class="btn btn--danger" onclick="clearAll()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 6h18M8 6v12M16 6v12"/></svg>
+        Clear All
+      </button>
+      <button class="btn btn--primary" onclick="location.href='write-prescription.html'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
+        New
+      </button>
+    </div>
+  </div>
+
+  <section class="card">
+    <div class="filters">
+      <input id="q" type="search" placeholder="Search by patient / diagnosis / notes…" />
+      <input id="disease" list="diseaseList" placeholder="Filter by disease (e.g., Hypertension)" />
+      <datalist id="diseaseList"></datalist>
+    </div>
+
+    <div id="count" class="muted" style="margin:4px 2px 10px"></div>
+
+    <div id="list" class="list"></div>
+
+    <div id="empty" class="empty" hidden>No prescriptions yet. Create one from the "New" button.</div>
+  </section>
+</div>
+
+<script>
+  const STORAGE_KEY = 'prescriptions';
+  const DRAFT_KEY = 'draftPrescription';
+  const $ = (s,ctx=document)=>ctx.querySelector(s);
+
+  function loadAll(){ try{ return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; } catch{ return []; } }
+  function saveAll(arr){ try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(arr)); } catch{} }
+  function saveDraft(p){ localStorage.setItem(DRAFT_KEY, JSON.stringify(p)); }
+
+  const listEl = $('#list');
+  const emptyEl = $('#empty');
+  const countEl = $('#count');
+  const diseaseDL = $('#diseaseList');
+  let all = loadAll();
+
+  // ------- Datalist: diseases (supports legacy) -------
+  const diseases = new Set();
+  all.forEach(p => {
+    if (Array.isArray(p.diseases)) { p.diseases.forEach(d => d?.name && diseases.add(d.name.trim())); }
+    else if (p.disease?.trim()) { diseases.add(p.disease.trim()); }
+  });
+  diseaseDL.innerHTML = Array.from(diseases).sort().map(d => `<option value="${escapeHtml(d)}">`).join('');
+
+  // ------- Helpers -------
+  const TZ = 'Asia/Dhaka';
+  const parseISODate = s => {
+    const raw = (s || '').trim(); if (!raw) return null;
+    const dt = new Date(raw); return Number.isNaN(dt.getTime()) ? null : dt;
+  };
+  function formatDateLocal(d){
+    try{ return d ? d.toLocaleDateString(undefined, { timeZone: TZ, year:'numeric', month:'short', day:'numeric' }) : ''; }
+    catch{ return d?.toLocaleDateString() || ''; }
+  }
+  const addDays = (date, days) => { const d = new Date(date); d.setDate(d.getDate() + Number(days||0)); return d; };
+  function computeFollowUpDue(p){
+    const days = Number(p.followUpDays || 0);
+    if (!days) return { days: 0, due: null };
+    const base = parseISODate(p.date) || parseISODate(p.createdAt);
+    if (!base) return { days, due: null };
+    return { days, due: addDays(base, days) };
+  }
+  function getDiseaseSearchText(p){
+    if (Array.isArray(p.diseases)) return p.diseases.map(d => d.name || '').join(' ');
+    if (p.disease) return p.disease; return '';
+  }
+  function renderDiseasePills(p){
+    let ds = [];
+    if (Array.isArray(p.diseases)) ds = p.diseases;
+    else if (p.disease) ds = [{ name: p.disease, days: 0 }];
+    if (!ds.length) return '<div class="muted">No diseases recorded.</div>';
+    return `<div class="row">${
+      ds.map(d => {
+        const name = d.name || '';
+        const days = d.days || 0;
+        const duration = days > 0 ? ` (${days}d)` : '';
+        return `<span class="disease-pill">${escapeHtml(name)}${duration}</span>`;
+      }).join('')
+    }</div>`;
+  }
+  function renderMedPreview(meds){
+    if(!meds?.length) return '<div class="muted">No medicines</div>';
+    return `<div class="row">${
+      meds.slice(0,3).map(m=>`<span class="pill">${escapeHtml(m.name)} ${escapeHtml(m.dosage||'')}</span>`).join('')
+    }${meds.length>3?` <span class="pill">+${meds.length-3} more</span>`:''}</div>`;
+  }
+  const formatBP = bp => { const s = String(bp ?? '').trim(); return s ? (/\bmmhg\b/i.test(s) ? s : `${s} mmHg`) : ''; };
+  const formatWeight = w => { const s = String(w ?? '').trim(); return s ? (/\bkg\b/i.test(s) ? s : `${s} kg`) : ''; };
+  function getHistoryBundle(p){
+    const hist = p.histories || {};
+    return {
+      pastIllness:        hist.pastIllness        ?? p.pastIllness        ?? '',
+      birthHistory:       hist.birthHistory       ?? p.birthHistory       ?? '',
+      feedingHistory:     hist.feedingHistory     ?? p.feedingHistory     ?? '',
+      developmentHistory: hist.developmentHistory ?? p.developmentHistory ?? '',
+      treatmentHistory:   hist.treatmentHistory   ?? p.treatmentHistory   ?? '',
+      familyHistory:      hist.familyHistory      ?? p.familyHistory      ?? ''
+    };
+  }
+  function escapeHtml(s){
+    return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  // ------- Follow-up: set & save -------
+  function setFollowUp(id, val){
+    const p = all.find(x => x.id === id); if (!p) return;
+    let days = String(val || '').trim();
+    if (days === 'custom'){
+      const input = prompt('Enter follow-up days (1–60):', p.followUpDays || '');
+      if (input === null) { render(); return; }
+      days = input.trim();
+    }
+    if (days && (!/^\d+$/.test(days) || Number(days) < 1 || Number(days) > 60)){
+      alert('Please enter a number between 1 and 60.'); render(); return;
+    }
+    p.followUpDays = days ? String(Number(days)) : '';
+    saveAll(all); render();
+  }
+
+  // ------- Clear All -------
+  function clearAll(){
+    if (!confirm('This will permanently delete ALL prescriptions on this browser. Continue?')) return;
+    if (!confirm('Are you absolutely sure? This cannot be undone.')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(DRAFT_KEY);
+    all = [];
+    render();
+  }
+
+  // ------- Render -------
+  function render() {
+    const q = ($('#q').value || '').toLowerCase().trim();
+    const d = ($('#disease').value || '').toLowerCase().trim();
+
+    // reverse order: newest first
+    const sorted = [...all].sort((a,b)=>{
+      const da = new Date(a.date || a.createdAt);
+      const db = new Date(b.date || b.createdAt);
+      return db - da;
+    });
+
+    const HISTORY_ORDER = [
+      ['pastIllness','Past Illness'],
+      ['birthHistory','Birth History'],
+      ['feedingHistory','Feeding History'],
+      ['developmentHistory','Development History'],
+      ['treatmentHistory','Treatment History'],
+      ['familyHistory','Family History']
+    ];
+
+    const filtered = sorted.filter(p => {
+      const diseaseText = getDiseaseSearchText(p);
+      const histories = getHistoryBundle(p);
+      const hay = [
+        p.patientName, p.diagnosis, p.notes, diseaseText, p.bp, p.weight,
+        ...(p.meds || []).map(m => `${m.name} ${m.dosage} ${m.freq} ${m.duration}`),
+        ...Object.values(histories)
+      ].join(' ').toLowerCase();
+      const okQ = !q || hay.includes(q);
+      const okD = !d || diseaseText.toLowerCase().includes(d);
+      return okQ && okD;
+    });
+
+    countEl.textContent = `${filtered.length} of ${all.length} prescriptions`;
+    listEl.innerHTML = '';
+    emptyEl.hidden = filtered.length !== 0;
+
+    filtered.forEach(p => {
+      const card = document.createElement('article');
+      card.className = 'item';
+      card.tabIndex = 0; // focusable for a11y
+
+      const when = parseISODate(p.date) || parseISODate(p.createdAt);
+      const whenTxt = formatDateLocal(when);
+      const { days: fuDays, due } = computeFollowUpDue(p);
+      const dueTxt = due ? formatDateLocal(due) : '';
+
+      // --- Always-visible preview (compact) ---
+      const preview = document.createElement('div');
+      preview.className = 'preview';
+      preview.innerHTML = `
+        <div class="header-line">
+          <div class="row">
+            <span class="badge">#${p.id}</span>
+            <span class="badge">${whenTxt}</span>
+          </div>
+          <span class="chev">Expand ▾</span>
+        </div>
+        <strong>${escapeHtml(p.patientName || 'Unnamed Patient')}</strong>
+        <div class="row">
+          ${p.age ? `<span class="pill">Age: ${escapeHtml(p.age)}</span>` : ''}
+          ${p.sex ? `<span class="pill">Sex: ${escapeHtml(p.sex)}</span>` : ''}
+          <span class="badge badge--follow">Follow-up: <b>${fuDays ? fuDays+'d' : '—'}</b>${dueTxt ? ` • Due: ${escapeHtml(dueTxt)}` : ''}</span>
+          <select class="mini-select" onchange="setFollowUp(${p.id}, this.value)">
+            <option value="">Set…</option>
+            ${['3','5','7','10','14','21','28'].map(opt =>
+              `<option value="${opt}" ${String(p.followUpDays||'')===opt?'selected':''}>${opt} days</option>`
+            ).join('')}
+            <option value="custom">Custom…</option>
+            <option value="" ${p.followUpDays? '' : 'selected'}>None</option>
+          </select>
+        </div>
+        ${renderDiseasePills(p)}
+        ${p.diagnosis ? `<div class="muted">Dx: ${escapeHtml(p.diagnosis)}</div>` : ''}
+        ${renderMedPreview(p.meds || [])}
+      `;
+      card.appendChild(preview);
+
+      // --- Expandable details ---
+      const details = document.createElement('div');
+      details.className = 'details';
+      const bp = (p.bp ?? '').toString().trim();
+      const wt = (p.weight ?? '').toString().trim();
+
+      const histBox = document.createElement('div');
+      if (bp || wt){
+        const t = document.createElement('div');
+        t.className = 'muted'; t.style.fontWeight='600'; t.style.marginTop='6px'; t.textContent='Provisional:';
+        histBox.appendChild(t);
+        if (bp){ const l=document.createElement('div'); l.className='muted'; l.style.marginLeft='10px'; l.textContent='BP: '+formatBP(bp); histBox.appendChild(l); }
+        if (wt){ const l=document.createElement('div'); l.className='muted'; l.style.marginLeft='10px'; l.textContent='Weight: '+formatWeight(wt); histBox.appendChild(l); }
+      }
+      const histories = getHistoryBundle(p);
+      [
+        ['pastIllness','Past Illness'],
+        ['birthHistory','Birth History'],
+        ['feedingHistory','Feeding History'],
+        ['developmentHistory','Development History'],
+        ['treatmentHistory','Treatment History'],
+        ['familyHistory','Family History']
+      ].forEach(([key,label])=>{
+        const val = (histories[key] || '').trim(); if (!val) return;
+        const title = document.createElement('div'); title.className='muted'; title.style.marginTop='6px'; title.style.fontWeight='600'; title.textContent=label+':';
+        const body = document.createElement('div'); body.className='muted'; body.innerHTML = escapeHtml(val);
+        histBox.appendChild(title); histBox.appendChild(body);
+      });
+      details.appendChild(histBox);
+
+      // Actions (keep visible while expanded)
+      const actions = document.createElement('div');
+      actions.className = 'actions';
+      actions.innerHTML = `
+        <button class="btn" onclick="event.stopPropagation(); previewPrint(${p.id})">Preview / Print</button>
+        <button class="btn btn--primary" onclick="event.stopPropagation(); useAsTemplate(${p.id})">Use as Template</button>
+        <button class="btn btn--danger" onclick="event.stopPropagation(); deleteOne(${p.id})">Delete</button>
+      `;
+      details.appendChild(actions);
+
+      card.appendChild(details);
+
+      // toggle
+      const toggle = () => {
+        const open = card.classList.toggle('open');
+        card.querySelector('.chev').textContent = open ? 'Collapse ▴' : 'Expand ▾';
+      };
+      card.addEventListener('click', toggle);
+      card.addEventListener('keydown', (e)=>{ if(e.key==='Enter' || e.key===' ') { e.preventDefault(); toggle(); } });
+
+      listEl.appendChild(card);
+    });
+  }
+
+  // ------- Existing actions (exposed) -------
+  function previewPrint(id){
+    const p = all.find(x => x.id === id);
+    if (!p) return;
+    try { localStorage.setItem('printPrescription', JSON.stringify(p)); } catch {}
+    location.href = `print-prescription.html?id=${id}`;
+  }
+  function useAsTemplate(id){
+    const p = all.find(x=>x.id===id);
+    if(!p) return;
+    saveDraft(p);
+    location.href = 'write-prescription.html';
+  }
+  function deleteOne(id){
+    if(!confirm('Delete this prescription?')) return;
+    all = all.filter(x=>x.id!==id);
+    saveAll(all);
+    render();
+  }
+
+  // ------- Events -------
+  $('#q').addEventListener('input', render);
+  $('#disease').addEventListener('input', render);
+
+  function goBack(){
+    if (document.referrer && history.length>1) history.back(); else location.href='index.html';
+  }
+  // expose for inline handlers
+  window.setFollowUp = setFollowUp;
+  window.previewPrint = previewPrint;
+  window.useAsTemplate = useAsTemplate;
+  window.deleteOne = deleteOne;
+  window.goBack = goBack;
+  window.clearAll = clearAll;
+
+  // initial paint
+  render();
+</script>
+</body>
+</html>
